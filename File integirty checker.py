@@ -2,10 +2,14 @@ import os, time, sys
 import hashlib
 import psutil
 
-# Initialize the process variable outside the function
+# Get the current process for tracking memory usage
 process = psutil.Process(os.getpid())
 
 def md5(fname):
+    """
+    Computes the MD5 hash of the given file.
+    Returns the hash string or None if an error occurs.
+    """
     hash_md5 = hashlib.md5()
     try:
         with open(fname, "rb") as f:
@@ -19,31 +23,33 @@ def md5(fname):
         print(f"File not found: {fname}", flush=True)
     except IOError as e:
         print(f"I/O error({e.errno}) for file {fname}: {e.strerror}", flush=True)
-    except Exception as e:  # A generic catch-all for any other exceptions
+    except Exception as e:
         print(f"Error processing file {fname}: {e}", flush=True)
     return None
 
 def get_memory_usage():
+    """
+    Returns the current memory usage of the process in MB.
+    """
     memory_info = process.memory_info()
-    memory_used_mb = memory_info.rss / 1024 / 1024  # Convert bytes to MB
-    return memory_used_mb
-
+    return memory_info.rss / 1024 / 1024  # Convert bytes to megabytes
 
 def walk_and_check_hashes(directory, hash_file_path):
+    """
+    Walks through all files in the specified directory,
+    calculates their hashes, and checks if they match any known hash.
+    """
     hash_set = set()
     files_processed = 0
     total_files = 0
-    found_match = False  # Variable to track if any hash matches are found
+    found_match = False
 
-        # Print initial memory usage
     initial_usage = get_memory_usage()
     print(f"Initial memory usage: {initial_usage:.2f} MB")
 
+    start_time = time.time()
 
-    start_time = time.time()  # Capture the start time
-
-
-    # Load the hashes from the hash file
+    # Load the known hashes into a set for fast lookup
     try:
         with open(hash_file_path, 'r') as hash_file:
             for line in hash_file:
@@ -52,18 +58,16 @@ def walk_and_check_hashes(directory, hash_file_path):
         print(f"Error loading hash file: {e}", flush=True)
         return
 
-    # First, count all files to be scanned
+    # Count total files for progress reporting
     for root, dirs, files in os.walk(directory):
         total_files += len(files)
-
     print(f"Total files to be scanned: {total_files}")
 
-    # Walk through the directory
+    # Walk through files and compare their hashes
     for root, dirs, files in os.walk(directory):
         for name in files:
-            # Check memory usage before processing each file
             current_usage = get_memory_usage()
-            if current_usage > MEMORY_THRESHOLD_MB:  # Define MEMORY_THRESHOLD_MB as appropriate
+            if current_usage > MEMORY_THRESHOLD_MB:
                 print(f"\nWarning: High memory usage detected - {current_usage:.2f} MB")
 
             file_path = os.path.join(root, name)
@@ -71,34 +75,29 @@ def walk_and_check_hashes(directory, hash_file_path):
 
             if file_hash in hash_set:
                 print(f"\033[91mHash match found for {file_path}\033[0m", flush=True)
-                found_match = True  # Update found_match to True if a match is found
+                found_match = True
 
             files_processed += 1
-            if files_processed % 10 == 0:  # Print every 10 files
+            if files_processed % 10 == 0:
                 print(f"\rProcessed {files_processed} files...", flush=True)
 
-    end_time = time.time()  # Capture the end time
-    elapsed_time = end_time - start_time  # Calculate the elapsed time
+    end_time = time.time()
+    elapsed_time = end_time - start_time
 
-    # After processing all files, print the final messages
     print(f"\nFinished processing. Total files processed: {files_processed}")
     print(f"Number of hashes used for comparison: {len(hash_set)}")
     print(f"Time taken: {elapsed_time:.2f} seconds")
 
-    if not found_match:  # Check if no matches were found
+    if not found_match:
         print("No matching hashes found.")
 
-
+# Script entry point
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Usage: <script> <directory_to_scan> <hash_file_path>")
     else:
         directory_to_scan = sys.argv[1]
         hash_file_path = sys.argv[2]
-        MEMORY_THRESHOLD_MB = 300  # Set an appropriate memory usage threshold in MB
+        MEMORY_THRESHOLD_MB = 300  # Set memory warning threshold
         walk_and_check_hashes(directory_to_scan, hash_file_path)
 
-# LEGEND
-# https://virusshare.com/hashes
-    #     directory_to_scan = "/home/q/Documents/libri/infosec"
-    # hash_file_path = "/home/q/Documents/cyber_security/hashes/unpacked"
