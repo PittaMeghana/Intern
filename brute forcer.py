@@ -44,6 +44,8 @@ def main():
     brute_parser.add_argument("url", help="Login page URL")
     brute_parser.add_argument("username", help="Username to test")
     brute_parser.add_argument("password_file", help="File containing password list")
+     
+    args = parser.parse_args()
   
   if args.command == "brute":
         with open(args.password_file, "r") as f:
