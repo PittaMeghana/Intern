@@ -30,6 +30,16 @@ def main():
     port_parser.add_argument("target", help="Target IP address")
     port_parser.add_argument("--start", type=int, default=1, help="Starting port")
     port_parser.add_argument("--end", type=int, default=1024, help="Ending port")
+ 
+    args = parser.parse_args()
+
+    if args.command == "scan":
+        if not is_valid_ip(args.target):
+            print("Invalid IP address")
+            return
+        open_ports = scan_ports(args.target, args.start, args.end)
+        print(f"Open ports: {open_ports}")
+
 
 if __name__ == "__main__":
     main()
